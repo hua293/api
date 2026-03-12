@@ -691,6 +691,17 @@ def handle_api_request():
     # 检测是否为API调用（url中包含?api=1）
     if "api" in query_params and query_params["api"][0] == "1":
         try:
+            # 模拟检测 OPTIONS 请求：如果是预检请求，直接返回 CORS 头 + 200
+            if st.context.request.method == "OPTIONS":
+                st.header("Access-Control-Allow-Origin", "*")
+                st.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                st.header("Access-Control-Allow-Headers", "*")
+                st.header("Access-Control-Allow-Credentials", "true")
+                st.write("")  # 返回空响应体
+                st.stop()
+        except:
+            pass
+        try:
             # 从URL参数获取设计参数
             standard_volume_rate = float(query_params.get("standard_volume_rate", [500])[0])
             p_in = float(query_params.get("p_in", [0.1])[0])
@@ -767,10 +778,14 @@ def handle_api_request():
                     "report_path": report_path
                 }
             }
+            st.header("Access-Control-Allow-Origin", "*")
+            st.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            st.header("Access-Control-Allow-Headers", "*")
             st.write(json.dumps(api_result, ensure_ascii=False))
             st.stop()  # 停止渲染前端界面
 
         except Exception as e:
+            st.header("Access-Control-Allow-Origin", "*")
             st.write(json.dumps({"code": 500, "error": str(e)}))
             st.stop()
 
