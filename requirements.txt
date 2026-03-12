@@ -1,19 +1,6 @@
-# 核心Web框架（Streamlit）
-streamlit>=1.30.0,<2.0.0
-
-# 数值计算基础
-numpy>=1.24.0,<2.0.0
-pandas>=2.0.0,<3.0.0
-
-# 物性计算（CoolProp）
-CoolProp>=6.4.0,<7.0.0
-
-# 文档生成（Word报告）
-python-docx>=0.8.11,<1.0.0
-
-# 网络请求（代码中import了requests，需保留）
-requests>=2.31.0,<3.0.0
-
-# 新增：CORS跨域服务依赖
-fastapi>=0.104.0,<1.0.0
-uvicorn>=0.24.0,<1.0.0
+streamlit>=1.30.0,<1.35.0
+numpy>=1.24.0,<1.27.0
+pandas>=2.0.0,<2.2.0
+CoolProp>=6.4.0,<6.5.0
+python-docx>=0.8.11,<0.9.0
+requests>=2.31.0,<2.32.0
