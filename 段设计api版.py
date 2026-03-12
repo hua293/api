@@ -15,10 +15,7 @@ import pandas as pd
 import subprocess
 
 # ===================== 新增：CORS跨域配置所需导入 =====================
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from threading import Thread
-import uvicorn
+
 # ===================== 新增结束 =====================
 
 # ===================== 1. 核心配置（仅删除AI_CONFIG，其余保留） =====================
@@ -116,47 +113,56 @@ STAGE_TEMPLATES = {
 
 # ===================== 新增：CORS跨域服务配置 =====================
 def setup_cors_server():
-    """启动后台CORS服务，处理跨域请求和OPTIONS预检请求"""
-    # 初始化FastAPI应用
-    app = FastAPI()
+    try:
+        # 延迟导入FastAPI相关库，避免Streamlit Cloud误判为ASGI应用
+        from fastapi import FastAPI, Request
+        from fastapi.middleware.cors import CORSMiddleware
+        from threading import Thread
+        import uvicorn
 
-    # 允许跨域的来源（*表示允许所有，生产环境可指定你的公网域名）
-    allowed_origins = [
-        "*",  # 临时允许所有来源（测试用）
-        # "https://static-host-wu74govs-duansheji.sealoshzh.site"  # 你的公网HTML域名（生产用）
-    ]
+        # 初始化FastAPI应用
+        app = FastAPI()
 
-    # 添加CORS中间件
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allowed_origins,  # 允许的来源
-        allow_credentials=True,         # 允许携带Cookie
-        allow_methods=["*"],            # 允许所有HTTP方法（GET/POST/OPTIONS等）
-        allow_headers=["*"],            # 允许所有请求头
-    )
+        # 允许跨域的来源
+        allowed_origins = [
+            "*",  # 测试用，生产环境替换为你的域名
+        ]
 
-    # 专门处理OPTIONS预检请求，避免重定向
-    @app.options("/{path:path}")
-    async def handle_options(request: Request):
-        """处理所有OPTIONS预检请求，直接返回200"""
-        return {}
-
-    # 后台启动CORS服务（端口8502，不占用Streamlit主端口8501）
-    def run_cors():
-        uvicorn.run(
-            app,
-            host="0.0.0.0",    # 监听所有网络接口
-            port=8502,         # 独立端口
-            log_level="error"  # 仅输出错误日志
+        # 添加CORS中间件
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=allowed_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
         )
 
-    # 确保CORS服务只启动一次（通过session_state）
-    if "cors_started" not in st.session_state:
-        # 以守护线程启动，不阻塞Streamlit主进程
-        cors_thread = Thread(target=run_cors, daemon=True)
-        cors_thread.start()
-        st.session_state.cors_started = True
-        st.info("✅ CORS跨域服务已启动")
+        # 处理OPTIONS预检请求
+        @app.options("/{path:path}")
+        async def handle_options(request: Request):
+            return {}
+
+        # 后台启动CORS服务（指定asyncio循环，避免冲突）
+        def run_cors():
+            config = uvicorn.Config(
+                app,
+                host="0.0.0.0",
+                port=8502,
+                log_level="error",
+                loop="asyncio"  # 关键：适配Streamlit事件循环
+            )
+            server = uvicorn.Server(config)
+            server.run()
+
+        # 确保只启动一次
+        if "cors_started" not in st.session_state:
+            cors_thread = Thread(target=run_cors, daemon=True)
+            cors_thread.start()
+            st.session_state.cors_started = True
+            st.info("✅ CORS跨域服务已启动")
+    except Exception as e:
+        # CORS启动失败不影响核心功能
+        st.warning(f"⚠️ CORS服务启动失败（不影响核心功能）：{str(e)}")
 # ===================== 新增结束 =====================
 
 
@@ -530,16 +536,7 @@ class CentrifugalCompressorDesign:
         }
 
     def initialize_stage(self):
-        try:
-            result = subprocess.run(
-                ['python', 'D:\\programming\\forVSCode\\NEW\\prog\\InitializeStage.py'],
-                capture_output=True, text=True, timeout=60
-            )
-            matches = re.findall(r'(?:建议选取中冷|或中冷)\s*(\d+)\s*次', result.stdout)
-            return [int(m) for m in matches] if matches else [1, 2]
-        except Exception as e:
-            st.warning(f"初始化阶段失败: {e}")
-            return [1, 2]
+         return [1, 2]
 
     def save_parameters(self, file_path):
         try:
