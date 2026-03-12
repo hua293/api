@@ -14,6 +14,13 @@ import streamlit as st
 import pandas as pd
 import subprocess
 
+# ===================== 新增：CORS跨域配置所需导入 =====================
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from threading import Thread
+import uvicorn
+# ===================== 新增结束 =====================
+
 # ===================== 1. 核心配置（仅删除AI_CONFIG，其余保留） =====================
 # 存储目录（适配Streamlit临时目录）
 STORAGE = {
@@ -105,6 +112,52 @@ STAGE_TEMPLATES = {
         "Ds": 0.32
     }
 }
+
+
+# ===================== 新增：CORS跨域服务配置 =====================
+def setup_cors_server():
+    """启动后台CORS服务，处理跨域请求和OPTIONS预检请求"""
+    # 初始化FastAPI应用
+    app = FastAPI()
+
+    # 允许跨域的来源（*表示允许所有，生产环境可指定你的公网域名）
+    allowed_origins = [
+        "*",  # 临时允许所有来源（测试用）
+        # "https://static-host-wu74govs-duansheji.sealoshzh.site"  # 你的公网HTML域名（生产用）
+    ]
+
+    # 添加CORS中间件
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,  # 允许的来源
+        allow_credentials=True,         # 允许携带Cookie
+        allow_methods=["*"],            # 允许所有HTTP方法（GET/POST/OPTIONS等）
+        allow_headers=["*"],            # 允许所有请求头
+    )
+
+    # 专门处理OPTIONS预检请求，避免重定向
+    @app.options("/{path:path}")
+    async def handle_options(request: Request):
+        """处理所有OPTIONS预检请求，直接返回200"""
+        return {}
+
+    # 后台启动CORS服务（端口8502，不占用Streamlit主端口8501）
+    def run_cors():
+        uvicorn.run(
+            app,
+            host="0.0.0.0",    # 监听所有网络接口
+            port=8502,         # 独立端口
+            log_level="error"  # 仅输出错误日志
+        )
+
+    # 确保CORS服务只启动一次（通过session_state）
+    if "cors_started" not in st.session_state:
+        # 以守护线程启动，不阻塞Streamlit主进程
+        cors_thread = Thread(target=run_cors, daemon=True)
+        cors_thread.start()
+        st.session_state.cors_started = True
+        st.info("✅ CORS跨域服务已启动")
+# ===================== 新增结束 =====================
 
 
 # ===================== 2. 核心类与函数（完全保留原逻辑，无任何修改） =====================
@@ -727,6 +780,10 @@ def handle_api_request():
 
 # ===================== 4. Streamlit前端（替换为参数选择框，删除AI） =====================
 def main():
+    # ===================== 新增：启动CORS服务 =====================
+    setup_cors_server()
+    # ===================== 新增结束 =====================
+
     # 先处理API请求
     handle_api_request()
 
