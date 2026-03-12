@@ -777,6 +777,7 @@ def handle_api_request():
 
 # ===================== 4. Streamlit前端（替换为参数选择框，删除AI） =====================
 def main():
+    st.set_page_config(page_title="离心压缩机设计系统", page_icon="🔧", layout="wide")
     # ===================== 新增：启动CORS服务 =====================
     setup_cors_server()
     # ===================== 新增结束 =====================
@@ -784,7 +785,7 @@ def main():
     # 先处理API请求
     handle_api_request()
 
-    st.set_page_config(page_title="离心压缩机设计系统", page_icon="🔧", layout="wide")
+
 
     # 会话状态初始化
     if "design_results" not in st.session_state:
